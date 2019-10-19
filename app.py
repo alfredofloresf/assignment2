@@ -1,11 +1,12 @@
-from flask import Flask, render_template, redirect, url_for
+from flask import Flask, render_template, redirect, url_for, make_response
 from flask_bootstrap import Bootstrap
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, BooleanField
-from wtforms.validators import InputRequired, Email, Length
+from wtforms import StringField, PasswordField, BooleanField, validators
+from wtforms.validators import InputRequired, Email, Length, ValidationError
 from flask_sqlalchemy  import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
+from subprocess import check_output
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'Thisissupposedtobesecret!'
@@ -19,23 +20,29 @@ login_manager.login_view = 'login'
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(15), unique=True)
-    email = db.Column(db.String(50), unique=True)
+    twofa = db.Column(db.String(50), unique=True)
     password = db.Column(db.String(80))
 
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
 
+
+
+class SpellForm(FlaskForm):
+    inputtext = StringField("inputtext")
+
 class LoginForm(FlaskForm):
-    username = StringField('username', validators=[InputRequired(), Length(min=4, max=15)])
-    password = PasswordField('password', validators=[InputRequired(), Length(min=8, max=80)])
+    username = StringField('Username', id='uname', validators=[InputRequired(), Length(min=4, max=15)])
+    password = PasswordField('Password', id='pword', validators=[InputRequired(), Length(min=4, max=20)])
+    twofa = StringField('2fa', id='2fa', validators=[InputRequired(), Length(max=50)])
     remember = BooleanField('remember me')
 
 class RegisterForm(FlaskForm):
-    email = StringField('email', validators=[InputRequired(), Email(message='Invalid email'), Length(max=50)])
-    username = StringField('username', validators=[InputRequired(), Length(min=4, max=15)])
-    password = PasswordField('password', validators=[InputRequired(), Length(min=8, max=80)])
-
+    username = StringField('Username', id='uname', validators=[InputRequired(), Length(min=4, max=15)])
+    password = PasswordField('Password', id='pword', validators=[InputRequired(), Length(min=4, max=20)])
+    twofa = StringField('2fa', id='2fa', validators=[InputRequired(), Length(max=50)])
+    #twofa = StringField('2fa', id = '2fa', validators=[validate_phone, validators.Optional()])
 
 @app.route('/')
 def index():
@@ -44,33 +51,62 @@ def index():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     form = LoginForm()
-
+    result = None
     if form.validate_on_submit():
         user = User.query.filter_by(username=form.username.data).first()
         if user:
             if check_password_hash(user.password, form.password.data):
                 login_user(user, remember=form.remember.data)
-                return redirect(url_for('dashboard'))
-
+                result = "success"
+                return render_template('login.html', form=form, result=result)
+        result = "incorrect"
         return '<h1>Invalid username or password</h1>'
-        #return '<h1>' + form.username.data + ' ' + form.password.data + '</h1>'
+        #return '<h1>' + form.uname.data + ' ' + form.pword.data + '</h1>'
 
-    return render_template('login.html', form=form)
+    return render_template('login.html', form=form, result=result)
+
+
+@app.route('/spell_check', methods=['GET', 'POST'])
+@login_required
+def spell_check():
+    form = SpellForm()
+    return render_template('spell_check.html', form=form)
+    textout = None
+    misspelledd = None
+    if request.method == 'POST':
+        inputtext = form.inputtext.data
+        textout = inputtext
+        with open ("words.txt", "w") as fo:
+            fo.write(inputtext)
+        output = (chech_output(["./a.out", "words.txt", "wordlist.txt"], universal_newlines=True))
+        misspelledd = output.replace("\n",",").strip().strip(',')
+    response = make_response(render_template('spell_check.html', form=form, textout=textout, misspelledd=misspelled))
+    response.headers['Content-Security-Policy'] = "default-scr 'self'"
+    return response
+
 
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
     form = RegisterForm()
-
     if form.validate_on_submit():
         hashed_password = generate_password_hash(form.password.data, method='sha256')
-        new_user = User(username=form.username.data, email=form.email.data, password=hashed_password)
+        new_user = User(username=form.username.data, twofa=form.twofa.data, password=hashed_password)
         db.session.add(new_user)
         db.session.commit()
 
-        return '<h1>New user has been created!</h1>'
-        #return '<h1>' + form.username.data + ' ' + form.email.data + ' ' + form.password.data + '</h1>'
+        return '<h1>success</h1>'
+
 
     return render_template('signup.html', form=form)
+
+
+
+
+
+
+
+
+
 
 @app.route('/dashboard')
 @login_required
