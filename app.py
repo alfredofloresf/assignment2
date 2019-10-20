@@ -17,15 +17,35 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
 
+
+
+
+
+
+def validate_phone(form, field):
+    # form is the registration form below
+    # field is the phone number passed as two_fa
+    if len(field.data) > 14:
+        raise ValidationError('Failure: This is an invalid phone number, too many characters')
+    else:
+        sanitized_phone_number = field.data.strip(' ()-')
+        if len(sanitized_phone_number) == 10 or len(sanitized_phone_number) == 11:
+            for i in range(len(sanitized_phone_number)):
+                if sanitized_phone_number[i].isnumeric():
+                    continue
+                else:
+                    raise ValidationError('Failure: Phone numbers must only contain numbers')
+        else:
+            raise ValidationError('Failure: Phone numbers must contain 10 digits (or 11 with country code)')
+
+
+
+
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(15), unique=True)
     twofa = db.Column(db.String(50), unique=True)
     password = db.Column(db.String(80))
-
-@login_manager.user_loader
-def load_user(user_id):
-    return User.query.get(int(user_id))
 
 
 
@@ -35,14 +55,33 @@ class SpellForm(FlaskForm):
 class LoginForm(FlaskForm):
     username = StringField('Username', id='uname', validators=[InputRequired(), Length(min=4, max=15)])
     password = PasswordField('Password', id='pword', validators=[InputRequired(), Length(min=4, max=20)])
-    twofa = StringField('2fa', id='2fa', validators=[InputRequired(), Length(max=50)])
+    # twofa = StringField('2fa', id='2fa', validators=[InputRequired(), Length(max=50)])
+    twofa = StringField('two_fa', id='2fa', validators=[validate_phone, validators.Optional()])
     remember = BooleanField('remember me')
 
 class RegisterForm(FlaskForm):
     username = StringField('Username', id='uname', validators=[InputRequired(), Length(min=4, max=15)])
     password = PasswordField('Password', id='pword', validators=[InputRequired(), Length(min=4, max=20)])
-    twofa = StringField('2fa', id='2fa', validators=[InputRequired(), Length(max=50)])
+    # twofa = StringField('2fa', id='2fa', validators=[InputRequired(), Length(max=50)])
+    twofa = StringField('two_fa', id='2fa', validators=[validate_phone, validators.Optional()])
+
+    def validate_username(self, username):
+        user = User.query.filter_by(username=username.data).first()
+        if user is not None:
+            raise ValidationError('Failure: Username is already in use')
+
+
+
     #twofa = StringField('2fa', id = '2fa', validators=[validate_phone, validators.Optional()])
+
+
+
+
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
+
 
 @app.route('/')
 def index():
@@ -95,6 +134,8 @@ def signup():
         db.session.commit()
 
         return '<h1>success</h1>'
+
+
 
 
     return render_template('signup.html', form=form)
