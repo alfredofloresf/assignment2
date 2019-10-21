@@ -10,8 +10,8 @@ from subprocess import check_output
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'Thisissupposedtobesecret!'
-#app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////home/appsec/PycharmProjects/Part2/database.db'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////home/appsec/PycharmProjects/Part2/database.db'
+#app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
 bootstrap = Bootstrap(app)
 db = SQLAlchemy(app)
 login_manager = LoginManager()
@@ -95,8 +95,8 @@ def login():
                 login_user(user, remember=form.remember.data)
                 result = "success"
                 return render_template('login.html', form=form, result=result)
-        result = "incorrect"
-        return '<h1>Invalid username or password</h1>'
+        #result = "incorrect"
+        #return '<h1>Invalid username or password</h1>'
         #return '<h1>' + form.uname.data + ' ' + form.pword.data + '</h1>'
 
     return render_template('login.html', form=form, result=result)
