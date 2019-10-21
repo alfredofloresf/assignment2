@@ -99,7 +99,7 @@ def login():
         result = "incorrect"
         return '<h1>Invalid username or password</h1>'
         #return '<h1>' + form.uname.data + ' ' + form.pword.data + '</h1>'
-
+        result = "success"
     return render_template('login.html', form=form, result=result)
 
 
