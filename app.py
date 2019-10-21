@@ -1,4 +1,4 @@
-from flask import Flask, render_template, redirect, url_for, make_response
+from flask import Flask, render_template, redirect, url_for, make_response, flash, request
 from flask_bootstrap import Bootstrap
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, BooleanField, validators
@@ -6,6 +6,7 @@ from wtforms.validators import InputRequired, Email, Length, ValidationError
 from flask_sqlalchemy  import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
+import json
 from subprocess import check_output
 
 app = Flask(__name__)
@@ -23,8 +24,7 @@ login_manager.login_view = 'login'
 
 
 def validate_phone(form, field):
-    # form is the registration form below
-    # field is the phone number passed as two_fa
+
     if len(field.data) > 14:
         raise ValidationError('Failure: This is an invalid phone number, too many characters')
     else:
@@ -50,7 +50,7 @@ class User(UserMixin, db.Model):
 
 
 class SpellForm(FlaskForm):
-    inputtext = StringField("inputtext")
+    inputtext = StringField('CheckText', id='inputtext', validators=[InputRequired()])
 
 class LoginForm(FlaskForm):
     username = StringField('Username', id='uname', validators=[InputRequired(), Length(min=4, max=15)])
@@ -132,16 +132,8 @@ def signup():
         new_user = User(username=form.username.data, twofa=form.twofa.data, password=hashed_password)
         db.session.add(new_user)
         db.session.commit()
-
         return '<h1>success</h1>'
-
-
-
-
     return render_template('signup.html', form=form)
-
-
-
 
 
 
