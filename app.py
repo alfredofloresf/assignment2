@@ -6,20 +6,17 @@ from wtforms.validators import InputRequired, Email, Length, ValidationError
 from flask_sqlalchemy  import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
-import json
 from subprocess import check_output
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'Thisissupposedtobesecret!'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////home/appsec/PycharmProjects/Part2/database.db'
+# app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////home/appsec/PycharmProjects/Part2/database.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
 bootstrap = Bootstrap(app)
 db = SQLAlchemy(app)
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
-
-
-
 
 
 
@@ -44,7 +41,7 @@ def validate_phone(form, field):
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(15), unique=True)
-    twofa = db.Column(db.String(50), unique=True)
+    twofa = db.Column(db.String(50))
     password = db.Column(db.String(80))
 
 
@@ -117,34 +114,25 @@ def spell_check():
         textout = inputtext
         with open ("words.txt", "w") as fo:
             fo.write(inputtext)
-        output = (chech_output(["./a.out", "words.txt", "wordlist.txt"], universal_newlines=True))
+        output = (check_output(["./a.out", "words.txt", "wordlist.txt"], universal_newlines=True))
         misspelled = output.replace("\n",",").strip().strip(',')
     response = make_response(render_template('spell_check.html', form=form, textout=textout, misspelledd=misspelled))
     response.headers['Content-Security-Policy'] = "default-scr 'self'"
     return response
 
 
-@app.route('/signup', methods=['GET', 'POST'])
-def signup():
+@app.route('/register', methods=['GET', 'POST'])
+def register():
     form = RegisterForm()
     if form.validate_on_submit():
         hashed_password = generate_password_hash(form.password.data, method='sha256')
         new_user = User(username=form.username.data, twofa=form.twofa.data, password=hashed_password)
         db.session.add(new_user)
         db.session.commit()
-        return '<h1>success</h1>'
-    return render_template('signup.html', form=form)
+        return '<h1 id="success">success</h1>'
+    return render_template('register.html', form=form)
 
 
-
-
-
-
-
-@app.route('/dashboard')
-@login_required
-def dashboard():
-    return render_template('dashboard.html', name=current_user.username)
 
 @app.route('/logout')
 @login_required
