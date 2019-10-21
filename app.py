@@ -111,14 +111,14 @@ def spell_check():
     form = SpellForm()
     return render_template('spell_check.html', form=form)
     textout = None
-    misspelledd = None
+    misspelled = None
     if request.method == 'POST':
         inputtext = form.inputtext.data
         textout = inputtext
         with open ("words.txt", "w") as fo:
             fo.write(inputtext)
         output = (chech_output(["./a.out", "words.txt", "wordlist.txt"], universal_newlines=True))
-        misspelledd = output.replace("\n",",").strip().strip(',')
+        misspelled = output.replace("\n",",").strip().strip(',')
     response = make_response(render_template('spell_check.html', form=form, textout=textout, misspelledd=misspelled))
     response.headers['Content-Security-Policy'] = "default-scr 'self'"
     return response
