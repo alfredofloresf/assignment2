@@ -93,7 +93,7 @@ def login():
         if user:
             if check_password_hash(user.password, form.password.data):
                 login_user(user, remember=form.remember.data)
-                result = "success"
+               # result = "success"
                 return '<h1 id="result">success</h1>'
                 return render_template('login.html', form=form, result=result)
         result = "incorrect"
